@@ -28,10 +28,11 @@
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     const SKIER_W = 18, SKIER_H = 22;
-    let skier = { x: W/2, y: H-120, vx: 0 }; // <-- ski mais acima (era H-60)
+    let skier = { x: W/2, y: H-120, vx: 0 };
     let score = 0;
     let gameOver = false;
     let message = "";
+    let lives = 7; // 7 vidas
 
     // Obstáculos: árvores e bandeiras
     let obstacles = [];
@@ -93,6 +94,11 @@
       ctx.clearRect(0, 0, W, H);
       drawObstacles();
       drawSkier();
+      // Mostra vidas
+      ctx.font = "bold 14px Arial";
+      ctx.fillStyle = "#ff0";
+      ctx.textAlign = "left";
+      ctx.fillText("Vidas: " + lives, 8, 22);
       drawMessage();
     }
 
@@ -124,8 +130,17 @@
           Math.abs(skier.x - obs.x) < 14 &&
           Math.abs(skier.y - (obs.y+20)) < 18
         ) {
-          message = "Game Over!";
-          gameOver = true;
+          lives--;
+          if (lives > 0) {
+            message = "Bateu! Vidas: " + lives;
+            setTimeout(() => { message = ""; draw(); }, 900);
+            skier.x = W/2;
+            // Remove árvore atingida
+            obs.y = -100;
+          } else {
+            message = "foi tuas vidas de gato!";
+            gameOver = true;
+          }
         }
         if (
           obs.type === "flag" &&
@@ -149,7 +164,7 @@
 
     function update() {
       if (gameOver) return;
-      skier.y = H-120; // <-- ski mais acima (era H-60)
+      skier.y = H-120;
       updateObstacles();
       checkCollisions();
       score += Math.floor(speed);
@@ -159,13 +174,14 @@
     }
 
     function restartGame() {
-      skier = { x: W/2, y: H-120, vx: 0 }; // <-- ski mais acima (era H-60)
+      skier = { x: W/2, y: H-120, vx: 0 };
       score = 0;
       gameOver = false;
       message = "";
       obstacles = [];
       obstacleTimer = 0;
       speed = 2.5;
+      lives = 7; // reinicia vidas
       document.getElementById("score").textContent = "Pontos: 0";
       draw();
       requestAnimationFrame(update);
