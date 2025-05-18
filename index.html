@@ -171,20 +171,26 @@
       requestAnimationFrame(update);
     }
 
-    // Touch support: deslizar para esquerda/direita
+    // Touch support: deslizar para esquerda/direita e toque para restart
     let touchStart = null;
     canvas.addEventListener("touchstart", function(e) {
       if (e.touches.length === 1) {
         const t = e.touches[0];
-        touchStart = { x: t.clientX };
+        touchStart = { x: t.clientX, y: t.clientY };
       }
     }, {passive: false});
     canvas.addEventListener("touchend", function(e) {
       if (!touchStart) return;
       const t = e.changedTouches[0];
       const dx = t.clientX - touchStart.x;
-      if (dx > 18) moveSkier(1);
-      else if (dx < -18) moveSkier(-1);
+      const dy = t.clientY - touchStart.y;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 18) moveSkier(1);
+        else if (dx < -18) moveSkier(-1);
+      } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        // Toque rápido no centro reinicia o jogo se estiver game over
+        if (gameOver) restartGame();
+      }
       touchStart = null;
     }, {passive: false});
 
