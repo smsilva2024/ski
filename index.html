@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Ski SMS (Atari)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    body { background: #1e3a5c; color: #fff; font-family: Arial; text-align: center; margin: 0; }
+    canvas { background: #eaf6ff; display: block; margin: 20px auto; border: 2px solid #fff; touch-action: none; }
+    #score { font-size: 1.2em; margin: 10px; }
+    button { margin: 10px; padding: 8px 18px; font-size: 1em; border-radius: 6px; border: none; background: #444; color: #fff; }
+    button:hover { background: #666; }
+    .controls { margin: 10px auto; max-width: 200px; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .controls button { flex: 1 0 30%; }
+  </style>
+</head>
+<body>
+  <h2>Ski SMS (Atari)</h2>
+  <div id="score">Pontos: 0</div>
+  <canvas id="game" width="210" height="336"></canvas>
+  <div class="controls">
+    <button onclick="moveSkier(-1)">⬅️</button>
+    <button onclick="moveSkier(1)">➡️</button>
+    <button onclick="restartGame()">Novo Jogo</button>
+  </div>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const SKIER_W = 18, SKIER_H = 22;
+    let skier = { x: W/2, y: H-120, vx: 0 }; // <-- ski mais acima (era H-60)
+    let score = 0;
+    let gameOver = false;
+    let message = "";
+
+    // Obstáculos: árvores e bandeiras
+    let obstacles = [];
+    let obstacleTimer = 0;
+    let speed = 2.5;
+
+    function drawSkier() {
+      ctx.save();
+      ctx.translate(skier.x, skier.y);
+      // Corpo
+      ctx.fillStyle = "#ff0";
+      ctx.fillRect(-7, -10, 14, 18);
+      // Cabeça
+      ctx.beginPath();
+      ctx.arc(0, -14, 7, 0, 2*Math.PI);
+      ctx.fillStyle = "#fbb";
+      ctx.fill();
+      // Esquis
+      ctx.strokeStyle = "#a00";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-8, 10); ctx.lineTo(-12, 18);
+      ctx.moveTo(8, 10); ctx.lineTo(12, 18);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawObstacles() {
+      for (const obs of obstacles) {
+        if (obs.type === "tree") {
+          ctx.fillStyle = "#070";
+          ctx.beginPath();
+          ctx.moveTo(obs.x, obs.y+12);
+          ctx.lineTo(obs.x-10, obs.y+28);
+          ctx.lineTo(obs.x+10, obs.y+28);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#542";
+          ctx.fillRect(obs.x-2, obs.y+28, 4, 8);
+        } else if (obs.type === "flag") {
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(obs.x-2, obs.y+12, 4, 16);
+          ctx.fillStyle = obs.color;
+          ctx.fillRect(obs.x+2, obs.y+12, 10, 8);
+        }
+      }
+    }
+
+    function drawMessage() {
+      if (message) {
+        ctx.font = "bold 22px Arial";
+        ctx.fillStyle = "#ff0";
+        ctx.textAlign = "center";
+        ctx.fillText(message, W/2, H/2);
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      drawObstacles();
+      drawSkier();
+      drawMessage();
+    }
+
+    function updateObstacles() {
+      for (const obs of obstacles) {
+        obs.y -= speed;
+      }
+      obstacles = obstacles.filter(obs => obs.y > -40);
+      // Gera obstáculos
+      obstacleTimer--;
+      if (obstacleTimer <= 0) {
+        let type = Math.random() < 0.7 ? "tree" : "flag";
+        let x = 20 + Math.random()*(W-40);
+        let y = H+30;
+        if (type === "tree") {
+          obstacles.push({ type, x, y });
+        } else {
+          let color = Math.random() < 0.5 ? "#f00" : "#00f";
+          obstacles.push({ type, x, y, color });
+        }
+        obstacleTimer = 18 + Math.random()*22;
+      }
+    }
+
+    function checkCollisions() {
+      for (const obs of obstacles) {
+        if (
+          obs.type === "tree" &&
+          Math.abs(skier.x - obs.x) < 14 &&
+          Math.abs(skier.y - (obs.y+20)) < 18
+        ) {
+          message = "Game Over!";
+          gameOver = true;
+        }
+        if (
+          obs.type === "flag" &&
+          Math.abs(skier.x - obs.x) < 14 &&
+          Math.abs(skier.y - (obs.y+20)) < 18
+        ) {
+          score += 50;
+          obs.y = -100; // remove flag
+          document.getElementById("score").textContent = "Pontos: " + score;
+        }
+      }
+    }
+
+    function moveSkier(dir) {
+      if (gameOver) return;
+      skier.x += dir * 18;
+      if (skier.x < 16) skier.x = 16;
+      if (skier.x > W-16) skier.x = W-16;
+      draw();
+    }
+
+    function update() {
+      if (gameOver) return;
+      skier.y = H-120; // <-- ski mais acima (era H-60)
+      updateObstacles();
+      checkCollisions();
+      score += Math.floor(speed);
+      document.getElementById("score").textContent = "Pontos: " + score;
+      draw();
+      requestAnimationFrame(update);
+    }
+
+    function restartGame() {
+      skier = { x: W/2, y: H-120, vx: 0 }; // <-- ski mais acima (era H-60)
+      score = 0;
+      gameOver = false;
+      message = "";
+      obstacles = [];
+      obstacleTimer = 0;
+      speed = 2.5;
+      document.getElementById("score").textContent = "Pontos: 0";
+      draw();
+      requestAnimationFrame(update);
+    }
+
+    // Touch support: deslizar para esquerda/direita
+    let touchStart = null;
+    canvas.addEventListener("touchstart", function(e) {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        touchStart = { x: t.clientX };
+      }
+    }, {passive: false});
+    canvas.addEventListener("touchend", function(e) {
+      if (!touchStart) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStart.x;
+      if (dx > 18) moveSkier(1);
+      else if (dx < -18) moveSkier(-1);
+      touchStart = null;
+    }, {passive: false});
+
+    // Teclado
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") moveSkier(-1);
+      if (e.key === "ArrowRight") moveSkier(1);
+      if (e.key === "r" || e.key === "R") restartGame();
+    });
+
+    restartGame();
+  </script>
+</body>
+</html>
